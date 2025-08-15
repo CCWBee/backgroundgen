@@ -43,8 +43,7 @@
       </div>
 
       <div class="field">
-        <label for="headline">Headline phrase (negative space, supports 
-)</label>
+        <label for="headline">Headline phrase (negative space, supports line breaks)</label>
         <textarea id="headline">REAL WAGES STUCK IN 2008</textarea>
       </div>
 
@@ -249,8 +248,7 @@
       let phrase = els.bgPhrase.value.trim(); let head = els.headline.value.trim();
       if (els.caps.checked){ phrase = phrase.toUpperCase(); head = head.toUpperCase(); }
 
-      const lines = head.split(/
-/);
+        const lines = head.split(/\n/);
       const margin = Math.max(0, parseInt(els.margin.value, 10) || 80);
       const maxHeadPx = Math.max(24, parseInt(els.headlineSize.value, 10) || 260);
       const { sample: maskHit } = buildHeadlineMask(w, h, lines, margin, maxHeadPx, els.autoFit.checked);
