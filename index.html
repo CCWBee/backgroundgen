@@ -274,7 +274,7 @@
       const startSpreadRow = Math.max(0, totalRows - rowsInSpread);
       const easeOut = t => 1 - Math.pow(1 - t, 3);
 
-      let rowIndex = 0;
+      let rowIndex = 0, charOffset = 0;
       for (let y = 0; y < h + rowH; y += rowH, rowIndex++){
         const jitterX = jitter ? (Math.random()*jitter*2 - jitter) : 0;
         let x = -w + jitterX; // start off-canvas left
@@ -282,19 +282,19 @@
         let t = 0; if (rowIndex >= startSpreadRow && rowsInSpread > 0){ t = (rowIndex - startSpreadRow) / rowsInSpread; }
         const spreadMul = 1 + spreadFactor * easeOut(Math.min(1, Math.max(0, t)));
 
+        let charIndex = charOffset;
         while (x < w + w){
-          for (let i = 0; i < phraseChars.length; i++){
-            const ch = phraseChars[i];
-            const baseW = Math.max(1, (widths[ch] || 0) + letterSpacePx);
-            const adv = Math.max(0.5, baseW * spreadMul);
+          const ch = phraseChars[charIndex % phraseChars.length];
+          const baseW = Math.max(1, (widths[ch] || 0) + letterSpacePx);
+          const adv = Math.max(0.5, baseW * spreadMul);
 
-            if (!maskHit(x, y, baseW, smallPx)){
-              ctx.fillText(ch, x, y);
-            }
-            x += adv;
-            if (x > w + w) break;
+          if (!maskHit(x, y, baseW, smallPx)){
+            ctx.fillText(ch, x, y);
           }
+          x += adv;
+          charIndex++;
         }
+        charOffset = (charOffset + 1) % phraseChars.length;
       }
     }
 
