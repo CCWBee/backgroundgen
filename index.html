@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <title>Negative Text Poster Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Roboto Mono from Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ --panel:#f4f4f4; --ink:#111; --gap:12px; --accent:#0b5; --border:#e6e6e6; }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,sans-serif; color:var(--ink); background:#fff}
+    header{padding:16px 20px; border-bottom:1px solid var(--border)}
+    main{display:grid; grid-template-columns:360px 1fr; min-height:calc(100vh - 64px)}
+    aside{padding:16px; background:var(--panel); border-right:1px solid var(--border); overflow:auto}
+    .field{margin-bottom:var(--gap)}
+    .field label{display:block; font-size:13px; margin-bottom:6px}
+    .row{display:flex; gap:8px}
+    .row>*{flex:1}
+    input[type="text"],input[type="number"],input[type="color"],select,textarea{width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; background:#fff; font:inherit}
+    textarea{min-height:58px; resize:vertical}
+    .small{font-size:12px; opacity:.8}
+    button{appearance:none; border:1px solid var(--accent); background:var(--accent); color:#fff; padding:10px 12px; border-radius:8px; font-weight:600; cursor:pointer}
+    button.secondary{background:#fff; color:var(--accent)}
+    canvas{width:100%; height:100%; display:block; background:#ddd}
+    .toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .warn{color:#b00; font-size:12px; min-height:16px}
+    .preview-wrap{display:grid; grid-template-rows:auto 1fr}
+    .preview-bar{display:flex; gap:8px; align-items:center; padding:12px; border-bottom:1px solid #eee}
+    .toggle{display:flex; align-items:center; gap:8px}
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Negative Text Poster Generator</strong> : tiled mono text that wraps around a headline mask, character by character.
+  </header>
+
+  <main>
+    <aside aria-label="Controls">
+      <div class="field">
+        <label for="bgPhrase">Background phrase (repeats across poster)</label>
+        <textarea id="bgPhrase">EVERYTHING IS FINE</textarea>
+      </div>
+
+      <div class="field">
+        <label for="headline">Headline phrase (negative space, supports 
+)</label>
+        <textarea id="headline">REAL WAGES STUCK IN 2008</textarea>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="sizePreset">Size preset</label>
+          <select id="sizePreset">
+            <option value="1920x1080" selected>1920 × 1080</option>
+            <option value="3000x2000">3000 × 2000</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="width">Canvas width (px)</label>
+          <input id="width" type="number" min="300" step="10" value="1920">
+        </div>
+        <div class="field">
+          <label for="height">Canvas height (px)</label>
+          <input id="height" type="number" min="300" step="10" value="1080">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="bgColour">Background colour</label>
+          <input id="bgColour" type="color" value="#0a5bd8">
+        </div>
+        <div class="field">
+          <label for="fgColour">Small text colour</label>
+          <input id="fgColour" type="color" value="#ffffff">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="smallSize">Small text size (px)</label>
+          <input id="smallSize" type="number" min="6" max="64" value="18">
+        </div>
+        <div class="field">
+          <label for="lineHeight">Line height (%)</label>
+          <input id="lineHeight" type="number" min="80" max="200" value="110">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="letterSpace">Letter spacing (em)</label>
+          <input id="letterSpace" type="number" step="0.01" min="-0.2" max="0.5" value="0.02">
+        </div>
+        <div class="field">
+          <label for="jitter">Row jitter (px)</label>
+          <input id="jitter" type="number" min="0" max="10" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="headlineSize">Headline max size (px)</label>
+          <input id="headlineSize" type="number" min="24" max="800" value="260">
+        </div>
+        <div class="field">
+          <label for="margin">Headline margin (px)</label>
+          <input id="margin" type="number" min="0" max="400" value="80">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field toggle">
+          <input type="checkbox" id="caps" checked>
+          <label for="caps">Force ALL CAPS</label>
+        </div>
+        <div class="field toggle">
+          <input type="checkbox" id="autoFit" checked>
+          <label for="autoFit">Auto fit headline to width and height</label>
+        </div>
+      </div>
+
+      <!-- Bottom spread controls -->
+      <div class="row">
+        <div class="field">
+          <label for="spreadRows">Bottom spread rows</label>
+          <input id="spreadRows" type="number" min="0" max="60" value="8">
+        </div>
+        <div class="field">
+          <label for="spreadFactor">Max spread factor</label>
+          <input id="spreadFactor" type="number" step="0.1" min="0" max="10" value="4">
+        </div>
+      </div>
+
+      <div class="warn" id="warning"></div>
+
+      <div class="toolbar">
+        <button id="redraw">Update preview</button>
+        <button id="download" class="secondary">Download PNG</button>
+      </div>
+
+      <p class="small">Typeface: Roboto Mono, headline bold and small text regular. Fallback: monospace.</p>
+    </aside>
+
+    <section class="preview-wrap" aria-label="Preview">
+      <div class="preview-bar">
+        <span class="small">Live preview scales to your window. Download uses full canvas pixels.</span>
+      </div>
+      <canvas id="c"></canvas>
+    </section>
+  </main>
+
+  <script>
+    // Debounce
+    const debounce = (fn, ms=200) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+
+    const els = {
+      canvas: document.getElementById('c'),
+      bgPhrase: document.getElementById('bgPhrase'),
+      headline: document.getElementById('headline'),
+      sizePreset: document.getElementById('sizePreset'),
+      width: document.getElementById('width'),
+      height: document.getElementById('height'),
+      bgColour: document.getElementById('bgColour'),
+      fgColour: document.getElementById('fgColour'),
+      smallSize: document.getElementById('smallSize'),
+      lineHeight: document.getElementById('lineHeight'),
+      letterSpace: document.getElementById('letterSpace'),
+      jitter: document.getElementById('jitter'),
+      headlineSize: document.getElementById('headlineSize'),
+      margin: document.getElementById('margin'),
+      caps: document.getElementById('caps'),
+      autoFit: document.getElementById('autoFit'),
+      spreadRows: document.getElementById('spreadRows'),
+      spreadFactor: document.getElementById('spreadFactor'),
+      redraw: document.getElementById('redraw'),
+      download: document.getElementById('download'),
+      warning: document.getElementById('warning')
+    };
+
+    // DPR-aware canvas
+    function setCanvasSize(w, h){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      els.canvas.width = Math.round(w * dpr);
+      els.canvas.height = Math.round(h * dpr);
+      els.canvas.style.width = w + 'px';
+      els.canvas.style.height = h + 'px';
+      const ctx = els.canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return ctx;
+    }
+
+    function makeOffscreen(w, h, dpr){
+      const cvs = document.createElement('canvas');
+      cvs.width = Math.round(w * dpr);
+      cvs.height = Math.round(h * dpr);
+      const ctx = cvs.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { cvs, ctx, dpr };
+    }
+
+    function measure(ctx, text, font){ ctx.save(); ctx.font = font; const w = ctx.measureText(text).width; ctx.restore(); return w; }
+
+    function hexToRgb(hex){ const h = hex.replace('#',''); const v = h.length===3 ? h.split('').map(c=>c+c).join('') : h; const n = parseInt(v, 16); return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 }; }
+    function relLum({r,g,b}){ const s=[r,g,b].map(v=>v/255).map(v=> v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055,2.4)); return 0.2126*s[0]+0.7152*s[1]+0.0722*s[2]; }
+    function contrastRatio(a,b){ const L1=Math.max(relLum(hexToRgb(a)),relLum(hexToRgb(b))); const L2=Math.min(relLum(hexToRgb(a)),relLum(hexToRgb(b))); return (L1+0.05)/(L2+0.05); }
+
+    // Headline mask builder
+    function buildHeadlineMask(w, h, lines, margin, maxPx, autoFit){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const { cvs, ctx } = makeOffscreen(w, h, dpr);
+
+      let size = maxPx; let gap = Math.round(size*0.12);
+      if (autoFit){
+        const fits = (s)=>{ const font=`700 ${s}px 'Roboto Mono', monospace`; const widths = lines.map(t=>measure(ctx, t, font)); const g=Math.round(s*0.12); const th = lines.length*s + (lines.length-1)*g; return { ok: Math.max(...widths) <= (w - margin*2) && th <= (h - margin*2), g }; };
+        let lo=12, hi=maxPx; while (hi - lo > 1){ const mid=(hi+lo)>>1; const r=fits(mid); if (r.ok){ lo=mid; gap=r.g; } else { hi=mid; } } size=lo; }
+
+      const font = `700 ${size}px 'Roboto Mono', monospace`;
+      ctx.save(); ctx.fillStyle = '#000'; ctx.font = font; ctx.textAlign='center'; ctx.textBaseline='middle';
+      const totalH = lines.length*size + (lines.length-1)*gap; let startY = h/2 - totalH/2;
+      for (let i=0;i<lines.length;i++){ const y = startY + i*(size+gap) + size/2; ctx.fillText(lines[i], w/2, y); }
+      ctx.restore();
+
+      const pxW=cvs.width, pxH=cvs.height; const raw = ctx.getImageData(0,0,pxW,pxH).data;
+      const sample = (x,y,cw,ch)=>{
+        const sx=Math.max(0,Math.floor(x*dpr)), sy=Math.max(0,Math.floor(y*dpr));
+        const ex=Math.min(pxW-1,Math.ceil((x+cw)*dpr)), ey=Math.min(pxH-1,Math.ceil((y+ch)*dpr));
+        const steps=3; const dx=Math.max(1,Math.floor((ex-sx)/(steps-1))); const dy=Math.max(1,Math.floor((ey-sy)/(steps-1)));
+        for (let yy=sy; yy<=ey; yy+=dy){ for (let xx=sx; xx<=ex; xx+=dx){ const a = raw[(yy*pxW+xx)*4+3]; if (a>8) return true; } }
+        return false;
+      };
+      return { sample, size };
+    }
+
+    // Renderer
+    function render(){
+      const w = Math.max(1, parseInt(els.width.value, 10));
+      const h = Math.max(1, parseInt(els.height.value, 10));
+      const ctx = setCanvasSize(w, h);
+
+      const bg = els.bgColour.value; const fg = els.fgColour.value;
+      const ratio = contrastRatio(bg, fg);
+      els.warning.textContent = ratio < 1.5 ? 'Warning: very low contrast.' : (ratio < 3 ? 'Caution: low contrast may reduce legibility.' : '');
+
+      ctx.fillStyle = bg; ctx.fillRect(0,0,w,h);
+
+      let phrase = els.bgPhrase.value.trim(); let head = els.headline.value.trim();
+      if (els.caps.checked){ phrase = phrase.toUpperCase(); head = head.toUpperCase(); }
+
+      const lines = head.split(/
+/);
+      const margin = Math.max(0, parseInt(els.margin.value, 10) || 80);
+      const maxHeadPx = Math.max(24, parseInt(els.headlineSize.value, 10) || 260);
+      const { sample: maskHit } = buildHeadlineMask(w, h, lines, margin, maxHeadPx, els.autoFit.checked);
+
+      const smallPx = Math.max(6, parseInt(els.smallSize.value, 10) || 18);
+      const lh = Math.max(80, parseInt(els.lineHeight.value, 10) || 110) / 100;
+      const lsEm = parseFloat(els.letterSpace.value) || 0;
+      const jitter = Math.max(0, parseInt(els.jitter.value, 10) || 0);
+
+      const smallFont = `${smallPx}px 'Roboto Mono', monospace`;
+      ctx.font = smallFont; ctx.fillStyle = fg; ctx.textBaseline='top'; ctx.textAlign='left';
+
+      const unique = new Set((phrase + ' ').split(''));
+      const widths = {}; unique.forEach(ch => widths[ch] = ctx.measureText(ch).width);
+      const letterSpacePx = smallPx * lsEm;
+      const phraseChars = (phrase + ' ').split('');
+
+      const rowH = Math.ceil(smallPx * lh);
+      const totalRows = Math.ceil((h + rowH) / rowH);
+      const spreadRows = Math.max(0, parseInt(els.spreadRows.value, 10) || 0);
+      const spreadFactor = Math.max(0, parseFloat(els.spreadFactor.value) || 0);
+      const rowsInSpread = Math.min(spreadRows, totalRows);
+      const startSpreadRow = Math.max(0, totalRows - rowsInSpread);
+      const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+      let rowIndex = 0;
+      for (let y = 0; y < h + rowH; y += rowH, rowIndex++){
+        const jitterX = jitter ? (Math.random()*jitter*2 - jitter) : 0;
+        let x = -w + jitterX; // start off-canvas left
+
+        let t = 0; if (rowIndex >= startSpreadRow && rowsInSpread > 0){ t = (rowIndex - startSpreadRow) / rowsInSpread; }
+        const spreadMul = 1 + spreadFactor * easeOut(Math.min(1, Math.max(0, t)));
+
+        while (x < w + w){
+          for (let i = 0; i < phraseChars.length; i++){
+            const ch = phraseChars[i];
+            const baseW = Math.max(1, (widths[ch] || 0) + letterSpacePx);
+            const adv = Math.max(0.5, baseW * spreadMul);
+
+            if (!maskHit(x, y, baseW, smallPx)){
+              ctx.fillText(ch, x, y);
+            }
+            x += adv;
+            if (x > w + w) break;
+          }
+        }
+      }
+    }
+
+    function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+    function downloadPNG(){
+      const a = document.createElement('a');
+      const head = (els.caps.checked ? els.headline.value.toUpperCase() : els.headline.value).trim();
+      a.download = `poster-${slugify(head) || 'export'}.png`;
+      a.href = els.canvas.toDataURL('image/png');
+      a.click();
+    }
+
+    function applyPreset(){
+      const v = els.sizePreset.value; if (v === 'custom') return;
+      const [pw, ph] = v.split('x').map(n=>parseInt(n,10));
+      els.width.value = pw; els.height.value = ph; redraw();
+    }
+
+    const redraw = debounce(render, 80);
+
+    [
+      'bgPhrase','headline','sizePreset','width','height','bgColour','fgColour','smallSize','lineHeight',
+      'letterSpace','jitter','headlineSize','margin','caps','autoFit','spreadRows','spreadFactor'
+    ].forEach(id => {
+      const el = els[id]; el.addEventListener('input', id === 'sizePreset' ? applyPreset : redraw);
+    });
+    els.redraw.addEventListener('click', render);
+    els.download.addEventListener('click', downloadPNG);
+
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(render); } else { render(); }
+    window.addEventListener('resize', redraw);
+  </script>
+</body>
+</html>
