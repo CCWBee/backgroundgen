@@ -101,7 +101,7 @@
 
       <div class="row">
         <div class="field">
-          <label for="headlineSize">Headline max size (px)</label>
+          <label for="headlineSize">Headline size (px)</label>
           <input id="headlineSize" type="number" min="24" max="800" value="260">
         </div>
         <div class="field">
@@ -202,36 +202,72 @@
 
     function measure(ctx, text, font){ ctx.save(); ctx.font = font; const w = ctx.measureText(text).width; ctx.restore(); return w; }
 
+    function wrapText(ctx, text, font, maxWidth){
+      const words = text.split(/\s+/);
+      const lines = [];
+      let line = '';
+      words.forEach(word => {
+        const test = line ? line + ' ' + word : word;
+        if (measure(ctx, test, font) <= maxWidth || !line){
+          line = test;
+        } else {
+          lines.push(line);
+          line = word;
+        }
+      });
+      if (line) lines.push(line);
+      return lines;
+    }
+
     function hexToRgb(hex){ const h = hex.replace('#',''); const v = h.length===3 ? h.split('').map(c=>c+c).join('') : h; const n = parseInt(v, 16); return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 }; }
     function relLum({r,g,b}){ const s=[r,g,b].map(v=>v/255).map(v=> v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055,2.4)); return 0.2126*s[0]+0.7152*s[1]+0.0722*s[2]; }
     function contrastRatio(a,b){ const L1=Math.max(relLum(hexToRgb(a)),relLum(hexToRgb(b))); const L2=Math.min(relLum(hexToRgb(a)),relLum(hexToRgb(b))); return (L1+0.05)/(L2+0.05); }
 
     // Headline mask builder
-    function buildHeadlineMask(w, h, lines, margin, maxPx, autoFit){
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
-      const { cvs, ctx } = makeOffscreen(w, h, dpr);
+    function buildHeadlineMask(w, h, head, margin, maxPx, autoFit){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const { cvs, ctx } = makeOffscreen(w, h, dpr);
 
-      let size = maxPx; let gap = Math.round(size*0.12);
-      if (autoFit){
-        const fits = (s)=>{ const font=`700 ${s}px 'Roboto Mono', monospace`; const widths = lines.map(t=>measure(ctx, t, font)); const g=Math.round(s*0.12); const th = lines.length*s + (lines.length-1)*g; return { ok: Math.max(...widths) <= (w - margin*2) && th <= (h - margin*2), g }; };
-        let lo=12, hi=maxPx; while (hi - lo > 1){ const mid=(hi+lo)>>1; const r=fits(mid); if (r.ok){ lo=mid; gap=r.g; } else { hi=mid; } } size=lo; }
-
-      const font = `700 ${size}px 'Roboto Mono', monospace`;
-      ctx.save(); ctx.fillStyle = '#000'; ctx.font = font; ctx.textAlign='center'; ctx.textBaseline='middle';
-      const totalH = lines.length*size + (lines.length-1)*gap; let startY = h/2 - totalH/2;
-      for (let i=0;i<lines.length;i++){ const y = startY + i*(size+gap) + size/2; ctx.fillText(lines[i], w/2, y); }
-      ctx.restore();
-
-      const pxW=cvs.width, pxH=cvs.height; const raw = ctx.getImageData(0,0,pxW,pxH).data;
-      const sample = (x,y,cw,ch)=>{
-        const sx=Math.max(0,Math.floor(x*dpr)), sy=Math.max(0,Math.floor(y*dpr));
-        const ex=Math.min(pxW-1,Math.ceil((x+cw)*dpr)), ey=Math.min(pxH-1,Math.ceil((y+ch)*dpr));
-        const steps=3; const dx=Math.max(1,Math.floor((ex-sx)/(steps-1))); const dy=Math.max(1,Math.floor((ey-sy)/(steps-1)));
-        for (let yy=sy; yy<=ey; yy+=dy){ for (let xx=sx; xx<=ex; xx+=dx){ const a = raw[(yy*pxW+xx)*4+3]; if (a>8) return true; } }
-        return false;
+    let size = maxPx; let gap = Math.round(size*0.12); let lines;
+    if (autoFit){
+      const fits = (s)=>{
+        const font = `700 ${s}px 'Roboto Mono', monospace`;
+        const maxW = w - margin*2;
+        const lns = wrapText(ctx, head, font, maxW);
+        const widths = lns.map(t=>measure(ctx, t, font));
+        const g = Math.round(s*0.12);
+        const th = lns.length*s + (lns.length-1)*g;
+        return { ok: Math.max(...widths) <= maxW && th <= (h - margin*2), g, lines: lns };
       };
-      return { sample, size };
+      let lo=12, hi=maxPx;
+      while (hi - lo > 1){
+        const mid=(hi+lo)>>1;
+        const r=fits(mid);
+        if (r.ok){ lo=mid; gap=r.g; lines=r.lines; } else { hi=mid; }
+      }
+      size=lo;
+      lines = fits(size).lines;
+    } else {
+      const font = `700 ${size}px 'Roboto Mono', monospace`;
+      lines = wrapText(ctx, head, font, w - margin*2);
     }
+
+    const font = `700 ${size}px 'Roboto Mono', monospace`;
+    ctx.save(); ctx.fillStyle = '#000'; ctx.font = font; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const totalH = lines.length*size + (lines.length-1)*gap; let startY = h/2 - totalH/2;
+    for (let i=0;i<lines.length;i++){ const y = startY + i*(size+gap) + size/2; ctx.fillText(lines[i], w/2, y); }
+    ctx.restore();
+
+    const pxW=cvs.width, pxH=cvs.height; const raw = ctx.getImageData(0,0,pxW,pxH).data;
+    const sample = (x,y,cw,ch)=>{
+      const sx=Math.max(0,Math.floor(x*dpr)), sy=Math.max(0,Math.floor(y*dpr));
+      const ex=Math.min(pxW-1,Math.ceil((x+cw)*dpr)), ey=Math.min(pxH-1,Math.ceil((y+ch)*dpr));
+      const steps=3; const dx=Math.max(1,Math.floor((ex-sx)/(steps-1))); const dy=Math.max(1,Math.floor((ey-sy)/(steps-1)));
+      for (let yy=sy; yy<=ey; yy+=dy){ for (let xx=sx; xx<=ex; xx+=dx){ const a = raw[(yy*pxW+xx)*4+3]; if (a>8) return true; } }
+      return false;
+    };
+    return { sample, size };
+  }
 
     // Renderer
     function render(){
@@ -248,10 +284,9 @@
       let phrase = els.bgPhrase.value.trim(); let head = els.headline.value.trim();
       if (els.caps.checked){ phrase = phrase.toUpperCase(); head = head.toUpperCase(); }
 
-        const lines = head.split(/\n/);
-      const margin = Math.max(0, parseInt(els.margin.value, 10) || 80);
-      const maxHeadPx = Math.max(24, parseInt(els.headlineSize.value, 10) || 260);
-      const { sample: maskHit } = buildHeadlineMask(w, h, lines, margin, maxHeadPx, els.autoFit.checked);
+        const margin = Math.max(0, parseInt(els.margin.value, 10) || 80);
+        const headPx = Math.max(24, parseInt(els.headlineSize.value, 10) || 260);
+        const { sample: maskHit } = buildHeadlineMask(w, h, head, margin, headPx, els.autoFit.checked);
 
       const smallPx = Math.max(6, parseInt(els.smallSize.value, 10) || 18);
       const lh = Math.max(80, parseInt(els.lineHeight.value, 10) || 110) / 100;
