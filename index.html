@@ -318,8 +318,15 @@
         const jitterX = jitter ? (Math.random()*jitter*2 - jitter) : 0;
         let x = -w + jitterX; // start off-canvas left
 
-        let t = 0; if (rowIndex >= startSpreadRow && rowsInSpread > 0){ t = (rowIndex - startSpreadRow) / rowsInSpread; }
-        const spreadMul = 1 + spreadFactor * easeOut(Math.min(1, Math.max(0, t)));
+        let t = 0;
+        if (rowIndex >= startSpreadRow && rowsInSpread > 0){
+          t = rowsInSpread === 1
+            ? 1
+            : (rowIndex - startSpreadRow) / (rowsInSpread - 1);
+        }
+        const progress = easeOut(Math.min(1, Math.max(0, t)));
+        const spreadMul = 1 + spreadFactor * progress;
+        const dropProb = progress;
 
         let charIndex = Math.floor(Math.random() * phraseChars.length);
         while (x < w + w){
@@ -327,7 +334,7 @@
           const baseW = Math.max(1, (widths[ch] || 0) + letterSpacePx);
           const adv = Math.max(0.5, baseW * spreadMul);
 
-          if (!maskHit(x, y, baseW, smallPx)){
+          if (!maskHit(x, y, baseW, smallPx) && Math.random() > dropProb){
             ctx.fillText(ch, x, y);
           }
           x += adv;
