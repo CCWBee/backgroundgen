@@ -125,6 +125,11 @@
         </div>
       </div>
 
+      <div class="field">
+        <label for="finalLine">Bottom line word</label>
+        <input id="finalLine" type="text" value="FINE">
+      </div>
+
       <!-- Bottom spread controls -->
       <div class="row">
         <div class="field">
@@ -176,6 +181,7 @@
       margin: document.getElementById('margin'),
       caps: document.getElementById('caps'),
       autoFit: document.getElementById('autoFit'),
+      finalLine: document.getElementById('finalLine'),
       spreadRows: document.getElementById('spreadRows'),
       spreadFactor: document.getElementById('spreadFactor'),
       redraw: document.getElementById('redraw'),
@@ -285,8 +291,14 @@
 
       ctx.fillStyle = bg; ctx.fillRect(0,0,w,h);
 
-      let phrase = els.bgPhrase.value.trim(); let head = els.headline.value.trim();
-      if (els.caps.checked){ phrase = phrase.toUpperCase(); head = head.toUpperCase(); }
+      let phrase = els.bgPhrase.value.trim();
+      let head = els.headline.value.trim();
+      let finalLine = els.finalLine.value.trim();
+      if (els.caps.checked){
+        phrase = phrase.toUpperCase();
+        head = head.toUpperCase();
+        finalLine = finalLine.toUpperCase();
+      }
 
         const margin = Math.max(0, parseInt(els.margin.value, 10) || 80);
         const headPx = Math.max(24, parseInt(els.headlineSize.value, 10) || 260);
@@ -300,13 +312,15 @@
       const smallFont = `${smallPx}px 'Coinbase Sans', sans-serif`;
       ctx.font = smallFont; ctx.fillStyle = fg; ctx.textBaseline='top'; ctx.textAlign='left';
 
-      const unique = new Set((phrase + ' ').split(''));
+      const unique = new Set((phrase + finalLine + ' ').split(''));
       const widths = {}; unique.forEach(ch => widths[ch] = ctx.measureText(ch).width);
       const letterSpacePx = smallPx * lsEm;
       const phraseChars = (phrase + ' ').split('');
 
       const rowH = Math.ceil(smallPx * lh);
-      const totalRows = Math.ceil((h + rowH) / rowH);
+      const visibleRows = Math.ceil(h / rowH);
+      const lastRowY = (visibleRows - 1) * rowH;
+      const totalRows = visibleRows + 1;
       const spreadRows = Math.max(0, parseInt(els.spreadRows.value, 10) || 0);
       const spreadFactor = Math.max(0, parseFloat(els.spreadFactor.value) || 0);
       const rowsInSpread = Math.min(spreadRows, totalRows);
@@ -315,6 +329,7 @@
 
       let rowIndex = 0;
       for (let y = 0; y < h + rowH; y += rowH, rowIndex++){
+        if (finalLine && y === lastRowY) continue;
         const jitterX = jitter ? (Math.random()*jitter*2 - jitter) : 0;
         let x = -w + jitterX; // start off-canvas left
 
@@ -341,6 +356,20 @@
           charIndex++;
         }
       }
+
+      if (finalLine){
+        const chars = finalLine.split('');
+        const segment = w / chars.length;
+        const y = lastRowY;
+        for (let i=0;i<chars.length;i++){
+          const ch = chars[i];
+          const chW = widths[ch] || ctx.measureText(ch).width;
+          const x = segment*i + segment/2 - chW/2;
+          if (!maskHit(x, y, chW, smallPx)){
+            ctx.fillText(ch, x, y);
+          }
+        }
+      }
     }
 
     function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
@@ -362,7 +391,7 @@
 
     [
       'bgPhrase','headline','sizePreset','width','height','bgColour','fgColour','smallSize','lineHeight',
-      'letterSpace','jitter','headlineSize','margin','caps','autoFit','spreadRows','spreadFactor'
+      'letterSpace','jitter','headlineSize','margin','caps','autoFit','finalLine','spreadRows','spreadFactor'
     ].forEach(id => {
       const el = els[id]; el.addEventListener('input', id === 'sizePreset' ? applyPreset : redraw);
     });
