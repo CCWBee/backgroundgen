@@ -10,25 +10,25 @@ def fine_fade(
     """Return rows of text fading to a spaced "F I N E".
 
     Letters disappear from random positions as the lines progress downward.
-    Each line shows the remaining characters separated by single spaces and
-    removes an increasing number of letters so that text contracts rather than
-    leaving growing gaps. The final row spreads the letters ``F`` ``I`` ``N``
-    ``E`` evenly across ``width``.
+    Instead of squeezing remaining letters together, characters are replaced
+    with blanks so each line keeps the original layout. The number of removed
+    characters increases on each row. The final row spreads the letters ``F``
+    ``I`` ``N`` ``E`` evenly across ``width``.
     """
 
     rng = random.Random(seed)
-    remaining = list(phrase.replace(" ", ""))
+    chars = list(phrase)
     lines: List[str] = []
 
     for row in range(rows - 1):
-        lines.append(" ".join(remaining))
+        lines.append("".join(chars))
 
         # Remove more letters as we progress downwards, but ensure at least
         # four characters remain for the final "FINE" line.
-        remove_count = min(row + 1, len(remaining) - 4)
-        for _ in range(remove_count):
-            if len(remaining) > 4:
-                del remaining[rng.randrange(len(remaining))]
+        remaining_indices = [i for i, ch in enumerate(chars) if ch != " "]
+        remove_count = min(row + 1, max(0, len(remaining_indices) - 4))
+        for idx in rng.sample(remaining_indices, remove_count):
+            chars[idx] = " "
 
     # Final row: letters F I N E evenly spaced across the width
     letters_final = list("FINE")
