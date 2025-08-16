@@ -319,17 +319,18 @@
 
       const rowH = Math.ceil(smallPx * lh);
       const visibleRows = Math.ceil(h / rowH);
-      const lastRowY = (visibleRows - 1) * rowH;
-      const totalRows = visibleRows + 1;
+      const bufferRows = 4; // ensure space below the final line
+      const lastRowIndex = Math.max(0, visibleRows - bufferRows - 1);
+      const lastRowY = lastRowIndex * rowH;
+      const totalRows = Math.max(1, lastRowIndex);
       const spreadRows = Math.max(0, parseInt(els.spreadRows.value, 10) || 0);
       const spreadFactor = Math.max(0, parseFloat(els.spreadFactor.value) || 0);
       const rowsInSpread = Math.min(spreadRows, totalRows);
       const startSpreadRow = Math.max(0, totalRows - rowsInSpread);
       const easeIn = t => t * t;
 
-      let rowIndex = 0;
-      for (let y = 0; y < h + rowH; y += rowH, rowIndex++){
-        if (finalLine && y === lastRowY) continue;
+      for (let rowIndex = 0; rowIndex < lastRowIndex; rowIndex++){
+        const y = rowIndex * rowH;
         const jitterX = jitter ? (Math.random()*jitter*2 - jitter) : 0;
         let x = -w + jitterX; // start off-canvas left
 
