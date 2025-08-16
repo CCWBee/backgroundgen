@@ -4,9 +4,13 @@
   <meta charset="utf-8">
   <title>Negative Text Poster Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Roboto Mono from Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: 'Coinbase Sans';
+      src: url('./fonts/Coinbase_Sans-Regular-web-1.32.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+    }
     :root{ --panel:#f4f4f4; --ink:#111; --gap:12px; --accent:#0b5; --border:#e6e6e6; }
     *{box-sizing:border-box}
     body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,sans-serif; color:var(--ink); background:#fff}
@@ -140,7 +144,7 @@
         <button id="download" class="secondary">Download PNG</button>
       </div>
 
-      <p class="small">Typeface: Roboto Mono, headline bold and small text regular. Fallback: monospace.</p>
+      <p class="small">Typeface: Coinbase Sans, headline bold and small text regular. Fallback: sans-serif.</p>
     </aside>
 
     <section class="preview-wrap" aria-label="Preview">
@@ -231,7 +235,7 @@
     let size = maxPx; let gap = Math.round(size*0.12); let lines;
     if (autoFit){
       const fits = (s)=>{
-        const font = `700 ${s}px 'Roboto Mono', monospace`;
+        const font = `700 ${s}px 'Coinbase Sans', sans-serif`;
         const maxW = w - margin*2;
         const lns = wrapText(ctx, head, font, maxW);
         const widths = lns.map(t=>measure(ctx, t, font));
@@ -248,11 +252,11 @@
       size=lo;
       lines = fits(size).lines;
     } else {
-      const font = `700 ${size}px 'Roboto Mono', monospace`;
+      const font = `700 ${size}px 'Coinbase Sans', sans-serif`;
       lines = wrapText(ctx, head, font, w - margin*2);
     }
 
-    const font = `700 ${size}px 'Roboto Mono', monospace`;
+    const font = `700 ${size}px 'Coinbase Sans', sans-serif`;
     ctx.save(); ctx.fillStyle = '#000'; ctx.font = font; ctx.textAlign='center'; ctx.textBaseline='middle';
     const totalH = lines.length*size + (lines.length-1)*gap; let startY = h/2 - totalH/2;
     for (let i=0;i<lines.length;i++){ const y = startY + i*(size+gap) + size/2; ctx.fillText(lines[i], w/2, y); }
@@ -293,7 +297,7 @@
       const lsEm = parseFloat(els.letterSpace.value) || 0;
       const jitter = Math.max(0, parseInt(els.jitter.value, 10) || 0);
 
-      const smallFont = `${smallPx}px 'Roboto Mono', monospace`;
+      const smallFont = `${smallPx}px 'Coinbase Sans', sans-serif`;
       ctx.font = smallFont; ctx.fillStyle = fg; ctx.textBaseline='top'; ctx.textAlign='left';
 
       const unique = new Set((phrase + ' ').split(''));
