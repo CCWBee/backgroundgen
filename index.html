@@ -84,7 +84,7 @@
       <div class="row">
         <div class="field">
           <label for="smallSize">Small text size (px)</label>
-          <input id="smallSize" type="number" min="6" max="64" value="18">
+          <input id="smallSize" type="number" min="6" max="64" value="9">
         </div>
         <div class="field">
           <label for="lineHeight">Line height (%)</label>
@@ -106,7 +106,7 @@
       <div class="row">
         <div class="field">
           <label for="headlineSize">Headline size (px)</label>
-          <input id="headlineSize" type="number" min="24" max="800" value="260">
+          <input id="headlineSize" type="number" min="24" max="800" value="190">
         </div>
         <div class="field">
           <label for="margin">Headline margin (px)</label>
@@ -134,7 +134,7 @@
       <div class="row">
         <div class="field">
           <label for="spreadRows">Bottom spread rows</label>
-          <input id="spreadRows" type="number" min="0" max="60" value="8">
+          <input id="spreadRows" type="number" min="0" max="60" value="35">
         </div>
         <div class="field">
           <label for="spreadFactor">Max spread factor</label>
@@ -301,10 +301,10 @@
       }
 
         const margin = Math.max(0, parseInt(els.margin.value, 10) || 80);
-        const headPx = Math.max(24, parseInt(els.headlineSize.value, 10) || 260);
+        const headPx = Math.max(24, parseInt(els.headlineSize.value, 10) || 190);
         const { sample: maskHit } = buildHeadlineMask(w, h, head, margin, headPx, els.autoFit.checked);
 
-      const smallPx = Math.max(6, parseInt(els.smallSize.value, 10) || 18);
+      const smallPx = Math.max(6, parseInt(els.smallSize.value, 10) || 9);
       const lh = Math.max(80, parseInt(els.lineHeight.value, 10) || 110) / 100;
       const lsEm = parseFloat(els.letterSpace.value) || 0;
       const jitter = Math.max(0, parseInt(els.jitter.value, 10) || 0);
